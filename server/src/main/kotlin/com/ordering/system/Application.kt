@@ -76,6 +76,11 @@ fun Application.module() {
         settingsRoutes()
         websocketRoutes()
 
+        // 上传文件访问
+        val uploadsDir = File("static/uploads")
+        uploadsDir.mkdirs()
+        staticFiles("/uploads", uploadsDir)
+
         // 前端静态文件
         val staticDir = File("static")
         if (staticDir.exists() && staticDir.isDirectory) {

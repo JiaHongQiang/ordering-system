@@ -107,7 +107,7 @@ const formatTime = (ts: number) => {
       <el-empty v-else-if="filteredOrders.length === 0" description="暂无订单" />
 
       <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px">
-        <el-card v-for="order in filteredOrders" :key="order.id" shadow="hover">
+        <el-card v-for="order in filteredOrders" :key="order.id" shadow="hover" body-style="display: flex; flex-direction: column; height: 100%">
           <template #header>
             <div style="display: flex; justify-content: space-between; align-items: center">
               <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px">{{ order.orderNumber }}</span>
@@ -117,21 +117,23 @@ const formatTime = (ts: number) => {
             </div>
           </template>
 
-          <div style="margin-bottom: 12px">
-            <div style="color: #999; font-size: 13px">{{ formatTime(order.createdAt) }}</div>
-            <div v-if="order.notes" style="color: #e6a23c; font-size: 13px; margin-top: 4px">
-              备注: {{ order.notes }}
+          <div style="flex: 1">
+            <div style="margin-bottom: 12px">
+              <div style="color: #999; font-size: 13px">{{ formatTime(order.createdAt) }}</div>
+              <div v-if="order.notes" style="color: #e6a23c; font-size: 13px; margin-top: 4px">
+                备注: {{ order.notes }}
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px">
+              <span>共 {{ order.itemCount }} 件</span>
+              <span style="font-size: 20px; color: #f56c6c; font-weight: bold">
+                ¥{{ order.totalAmount.toFixed(2) }}
+              </span>
             </div>
           </div>
 
-          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px">
-            <span>共 {{ order.itemCount }} 件</span>
-            <span style="font-size: 20px; color: #f56c6c; font-weight: bold">
-              ¥{{ order.totalAmount.toFixed(2) }}
-            </span>
-          </div>
-
-          <div style="display: flex; gap: 8px">
+          <div style="display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid #f0f0f0">
             <el-button
               v-if="getNextStatus(order.status)"
               type="primary"

@@ -4,12 +4,15 @@ import com.ordering.system.db.CategoryDao
 import com.ordering.system.db.ProductDao
 import com.ordering.system.domain.model.Product
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.pipeline.*
 import kotlinx.serialization.Serializable
+import java.io.File
+import java.util.UUID
 
 @Serializable
 data class CategoryResponse(
@@ -198,5 +201,29 @@ fun Route.menuRoutes() {
         val ok = ProductDao.delete(id)
         if (ok) call.respond(HttpStatusCode.OK, mapOf("success" to true))
         else call.respondText("""{"error":"商品不存在"}""", ContentType.Application.Json, HttpStatusCode.NotFound)
+    }
+
+    // 图片上传
+    post("/api/upload") {
+        val multipart = call.receiveMultipart()
+        var fileName = ""
+        multipart.forEachPart { part ->
+            if (part is PartData.FileItem) {
+                val ext = part.originalFileName?.substringAfterLast('.', "jpg") ?: "jpg"
+                fileName = "${UUID.randomUUID()}.$ext"
+                val uploadDir = File("static/uploads")
+                uploadDir.mkdirs()
+                val file = File(uploadDir, fileName)
+                part.streamProvider().use { input ->
+                    file.outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+            part.dispose()
+        }
+        if (fileName.isNotEmpty()) {
+            call.respond(HttpStatusCode.OK, mapOf("url" to "/uploads/$fileName"))
+        } else {
+            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "未选择文件"))
+        }
     }
 }

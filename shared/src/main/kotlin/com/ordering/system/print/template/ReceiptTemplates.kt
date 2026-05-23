@@ -130,15 +130,16 @@ abstract class ReceiptTemplate(protected val charset: String = "GB18030") {
     }
 }
 
-// ========== 厨房票模板 ==========
+// ========== 后厨联模板 ==========
 
 /**
- * 厨房票模板。
+ * 后厨联模板（无价格）。
  *
  * 设计要点：
- * - 隐藏金额，避免后厨看到价格
- * - 单号和台号使用大号字体居中，确保醒目
- * - 加料备注（如"不加葱"、"多加面"）使用加粗 + 倍高倍宽字体
+ * - 取餐号超大居中，替代桌号
+ * - 无金额，后厨只关注出品
+ * - 核心属性（做法/面条/辣度）加粗显示
+ * - 加料带数量
  */
 class KitchenTicketTemplate(charset: String = "GB18030") : ReceiptTemplate(charset) {
 
@@ -146,56 +147,74 @@ class KitchenTicketTemplate(charset: String = "GB18030") : ReceiptTemplate(chars
         buffer.reset()
         writeCommand(PosCommands.INIT, PosCommands.CODE_PAGE_GB18030, PosCommands.CHINESE_MODE_ON)
 
-        // === 台号：大号居中 ===
-        writeCommand(PosCommands.ALIGN_CENTER, PosCommands.SIZE_DOUBLE_BOTH, PosCommands.BOLD_ON)
-        writeLine("台 ${order.tableNumber}")
+        // === 取餐号：超大居中 ===
+        writeCommand(PosCommands.ALIGN_CENTER)
+        writeCommand(PosCommands.BOLD_ON, PosCommands.SIZE_DOUBLE_BOTH)
+        writeLine("取餐号：${order.orderNumber}")
         writeCommand(PosCommands.SIZE_NORMAL, PosCommands.BOLD_OFF)
+        writeCommand(PosCommands.ALIGN_LEFT)
 
-        // === 单号：加粗 ===
-        writeCommand(PosCommands.BOLD_ON)
-        writeLine("单号: ${order.orderNumber}")
-        writeCommand(PosCommands.BOLD_OFF)
-
-        writeLine("时间: ${order.createdAt}")
         writeDivider('-')
 
+        // === 订单信息 ===
+        writeLine("类型：堂食 (凭号取餐)")
+        writeLine("下单时间：${order.createdAt}")
+
+        writeDivider('=')
+
         // === 明细 ===
-        order.items.forEach { item ->
-            // 菜名倍高加粗 + 右侧数量
-            val sizeLabel = if (item.selectedSize.isNotBlank()) "(${item.selectedSize})" else ""
-            val displayName = item.productName + sizeLabel
-            val qtyStr = "x${item.quantity}"
+        order.items.forEachIndexed { index, item ->
+            // 序号 + 商品名 + 数量
+            val num = "[ ${index + 1} ]"
+            val qtyStr = "×${item.quantity}"
+            writeCommand(PosCommands.BOLD_ON)
+            writeLine(buildAlignedLine("$num ${item.productName}", qtyStr))
+            writeCommand(PosCommands.BOLD_OFF)
+            writeDivider('-')
 
-            writeCommand(PosCommands.BOLD_ON, PosCommands.SIZE_DOUBLE_HEIGHT)
-            writeLine(buildAlignedLine(displayName, qtyStr))
-            writeCommand(PosCommands.SIZE_NORMAL, PosCommands.BOLD_OFF)
+            // 核心属性（无价格的小料）加粗
+            val freeMods = item.modifiers.filter { it.price <= 0.0 }
+            val paidMods = item.modifiers.filter { it.price > 0.0 }
 
-            // 加料备注：加粗 + 倍高倍宽（重点突出）
-            item.modifiers.forEach { mod ->
-                writeCommand(PosCommands.BOLD_ON, PosCommands.SIZE_DOUBLE_BOTH)
-                writeLine("  >> ${mod.modifierName}")
-                writeCommand(PosCommands.SIZE_NORMAL, PosCommands.BOLD_OFF)
+            if (freeMods.isNotEmpty()) {
+                writeCommand(PosCommands.BOLD_ON)
+                writeLine("  【${freeMods.joinToString(" / ") { it.modifierName }}】")
+                writeCommand(PosCommands.BOLD_OFF)
+                writeDivider('-')
             }
 
-            // 单品备注（如"不加葱"、"多加面"）
+            // 付费加料
+            if (paidMods.isNotEmpty()) {
+                writeLine("  * 加料：")
+                paidMods.forEach { mod ->
+                    val modQty = if (mod.quantity > 1) " × ${mod.quantity}" else ""
+                    writeLine("    - ${mod.modifierName}$modQty")
+                }
+            }
+
+            // 单品备注
             if (item.notes.isNotBlank()) {
-                writeCommand(PosCommands.BOLD_ON, PosCommands.SIZE_DOUBLE_BOTH)
-                writeLine("  !! ${item.notes}")
-                writeCommand(PosCommands.SIZE_NORMAL, PosCommands.BOLD_OFF)
+                writeLine("  ※ 备注：${item.notes}")
             }
 
-            writeEmptyLine()
+            if (index < order.items.size - 1) {
+                writeEmptyLine()
+            }
         }
 
         // === 整单备注 ===
         if (order.notes.isNotBlank()) {
-            writeDivider('-')
-            writeCommand(PosCommands.BOLD_ON, PosCommands.SIZE_DOUBLE_BOTH)
-            writeLine("备注: ${order.notes}")
-            writeCommand(PosCommands.SIZE_NORMAL, PosCommands.BOLD_OFF)
+            writeDivider('=')
+            writeLine("※ 备注：${order.notes}")
         }
 
-        // === 切纸 ===
+        writeDivider('=')
+
+        // === 页脚 ===
+        writeCommand(PosCommands.ALIGN_CENTER)
+        writeLine("[ 后厨存根 / 凭号取餐联 ]")
+        writeCommand(PosCommands.ALIGN_LEFT)
+
         writeEmptyLine(3)
         writeCommand(PosCommands.CUT_PARTIAL)
         return buffer.toByteArray()

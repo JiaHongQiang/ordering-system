@@ -262,9 +262,16 @@ fun Route.orderRoutes() {
             val connector = NetworkPrinterConnector("192.168.1.100")
             val driver = PosPrinterDriver(connector)
             driver.open()
+            // 顾客联（有价格）先打印
+            driver.print(driver.generateCustomerReceipt(printData))
+            // 切纸
+            driver.print(PosCommands.CUT_FULL)
+            // 后厨联（无价格）
             driver.print(driver.generateKitchenTicket(printData))
+            // 切纸
+            driver.print(PosCommands.CUT_FULL)
             driver.close()
-            call.respondText("""{"message":"打印成功"}""", ContentType.Application.Json)
+            call.respondText("""{"message":"打印成功（后厨联+顾客联）"}""", ContentType.Application.Json)
         } catch (e: Exception) {
             call.respondText("""{"error":"打印失败: ${e.message?.replace("\"", "'")}"}""", ContentType.Application.Json, HttpStatusCode.InternalServerError)
         }

@@ -11,6 +11,7 @@ const activeTab = ref('orders')
 // ==================== 订单 ====================
 const orders = ref<OrderResp[]>([])
 const orderFilter = ref('')
+const dateFilter = ref('today')
 const loading = ref(false)
 const orderDetailVisible = ref(false)
 const orderDetail = ref<OrderResp | null>(null)
@@ -24,7 +25,34 @@ const statusMap: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: '已取消', color: '#909399' }
 }
 
-const filteredOrders = computed(() => orderFilter.value ? orders.value.filter(o => o.status === orderFilter.value) : orders.value)
+const filteredOrders = computed(() => {
+  let list = orders.value
+  // 日期筛选
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const weekStart = todayStart - (now.getDay() - 1) * 86400000
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+  if (dateFilter.value === 'today') list = list.filter(o => o.createdAt >= todayStart)
+  else if (dateFilter.value === 'week') list = list.filter(o => o.createdAt >= weekStart)
+  else if (dateFilter.value === 'month') list = list.filter(o => o.createdAt >= monthStart)
+  // 状态筛选
+  if (orderFilter.value) list = list.filter(o => o.status === orderFilter.value)
+  return list
+})
+
+const orderStats = computed(() => {
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const todayOrders = orders.value.filter(o => o.createdAt >= todayStart)
+  const activeStatuses = ['PENDING', 'PAID', 'PREPARING', 'READY']
+  const completedToday = todayOrders.filter(o => o.status === 'COMPLETED')
+  return {
+    todayCount: todayOrders.length,
+    todayRevenue: todayOrders.filter(o => o.status !== 'CANCELLED').reduce((s, o) => s + o.totalAmount, 0),
+    activeCount: orders.value.filter(o => activeStatuses.includes(o.status)).length,
+    avgAmount: todayOrders.length > 0 ? todayOrders.filter(o => o.status !== 'CANCELLED').reduce((s, o) => s + o.totalAmount, 0) / Math.max(todayOrders.filter(o => o.status !== 'CANCELLED').length, 1) : 0
+  }
+})
 
 const loadOrders = async () => { loading.value = true; try { orders.value = await fetchOrders() } finally { loading.value = false } }
 
@@ -119,6 +147,19 @@ const openEditProduct = (p: Product) => {
   productIsEdit.value = true
   productForm.value = { id: p.id, categoryId: p.categoryId, name: p.name, basePrice: p.basePrice, description: p.description, imageUrl: p.imageUrl || '', isActive: p.isActive, hasModifiers: p.hasModifiers, sortOrder: p.sortOrder }
   productDialogVisible.value = true
+}
+
+const beforeUpload = (file: File) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isImage) ElMessage.error('只能上传图片')
+  if (!isLt2M) ElMessage.error('图片不能超过 2MB')
+  return isImage && isLt2M
+}
+
+const handleUploadSuccess = (res: any) => {
+  productForm.value.imageUrl = res.url
+  ElMessage.success('上传成功')
 }
 
 const saveProduct = async () => {
@@ -256,8 +297,35 @@ onMounted(() => { loadOrders(); loadAll(); loadSettings() })
 
     <!-- ========== 订单管理 ========== -->
     <div v-if="activeTab === 'orders'" style="flex: 1; overflow-y: auto; padding: 16px 24px">
-      <div style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center">
-        <el-select v-model="orderFilter" placeholder="筛选状态" clearable size="small" style="width: 150px">
+      <!-- 统计卡片 -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px">
+        <el-card shadow="never" body-style="padding: 16px">
+          <div style="color: #999; font-size: 13px; margin-bottom: 8px">今日订单</div>
+          <div style="font-size: 28px; font-weight: bold">{{ orderStats.todayCount }}</div>
+        </el-card>
+        <el-card shadow="never" body-style="padding: 16px">
+          <div style="color: #999; font-size: 13px; margin-bottom: 8px">今日营收</div>
+          <div style="font-size: 28px; font-weight: bold; color: #f56c6c">¥{{ orderStats.todayRevenue.toFixed(2) }}</div>
+        </el-card>
+        <el-card shadow="never" body-style="padding: 16px">
+          <div style="color: #999; font-size: 13px; margin-bottom: 8px">进行中</div>
+          <div style="font-size: 28px; font-weight: bold; color: #E6A23C">{{ orderStats.activeCount }}</div>
+        </el-card>
+        <el-card shadow="never" body-style="padding: 16px">
+          <div style="color: #999; font-size: 13px; margin-bottom: 8px">客单价</div>
+          <div style="font-size: 28px; font-weight: bold; color: #409EFF">¥{{ orderStats.avgAmount.toFixed(2) }}</div>
+        </el-card>
+      </div>
+
+      <!-- 筛选栏 -->
+      <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
+        <el-radio-group v-model="dateFilter" size="small">
+          <el-radio-button value="today">今日</el-radio-button>
+          <el-radio-button value="week">本周</el-radio-button>
+          <el-radio-button value="month">本月</el-radio-button>
+          <el-radio-button value="all">全部</el-radio-button>
+        </el-radio-group>
+        <el-select v-model="orderFilter" placeholder="订单状态" clearable size="small" style="width: 130px">
           <el-option v-for="(v, k) in statusMap" :key="k" :label="v.label" :value="k" />
         </el-select>
         <el-button size="small" @click="loadOrders">刷新</el-button>
@@ -297,13 +365,14 @@ onMounted(() => { loadOrders(); loadAll(); loadSettings() })
               <div v-if="row.selectedSize" style="font-size: 12px; color: #999">{{ row.selectedSize }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="小料" min-width="150">
+          <el-table-column label="小料/备注" min-width="150">
             <template #default="{ row }">
               <div v-for="mod in parseMods(row.appliedModifiersJson)" :key="mod.modifierId" style="font-size: 12px; color: #666">
                 {{ mod.groupName }}: {{ mod.modifierName }}
                 <span v-if="mod.quantity > 1" style="font-weight: bold">×{{ mod.quantity }}</span>
                 <span v-if="mod.price > 0" style="color: #f56c6c"> ¥{{ (mod.price * mod.quantity).toFixed(2) }}</span>
               </div>
+              <div v-if="row.notes" style="font-size: 12px; color: #e6a23c">※ {{ row.notes }}</div>
             </template>
           </el-table-column>
           <el-table-column label="数量" width="70" align="center" prop="quantity" />
@@ -483,7 +552,23 @@ onMounted(() => { loadOrders(); loadAll(); loadSettings() })
         <el-form-item label="排序"><el-input-number v-model="productForm.sortOrder" :min="0" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="productForm.description" type="textarea" :rows="2" /></el-form-item>
         <el-form-item label="启用小料"><el-switch v-model="productForm.hasModifiers" /><span style="color: #999; margin-left: 8px; font-size: 12px">开启后点餐时可选小料</span></el-form-item>
-        <el-form-item label="图片"><el-input v-model="productForm.imageUrl" placeholder="URL（可选）" /></el-form-item>
+        <el-form-item label="图片">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <el-upload
+              action="/api/upload"
+              :show-file-list="false"
+              :on-success="handleUploadSuccess"
+              :before-upload="beforeUpload"
+              accept="image/*"
+            >
+              <el-button size="small">上传图片</el-button>
+            </el-upload>
+            <el-input v-model="productForm.imageUrl" placeholder="或输入图片URL" style="flex: 1" size="small" />
+          </div>
+          <div v-if="productForm.imageUrl" style="margin-top: 8px">
+            <el-image :src="productForm.imageUrl" style="width: 100px; height: 100px; border-radius: 6px" fit="cover" />
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer><el-button @click="productDialogVisible = false">取消</el-button><el-button type="primary" @click="saveProduct">保存</el-button></template>
     </el-dialog>
