@@ -1,4 +1,4 @@
-# 老李板面馆 - 点餐系统
+# 点餐系统
 
 一个适合小型餐饮店的点餐系统，支持堂食叫号、小料配置、小票打印。
 
@@ -12,14 +12,15 @@
 
 ### 后台管理
 - **订单管理**：查看订单详情、状态流转（待支付→已支付→制作中→待取餐→已完成）、打印小票
-- **菜单管理**：分类增删改、商品增删改/上下架、关联小料组
+- **菜单管理**：分类增删改、商品增删改/上下架、关联小料组、商品图片上传
 - **小料配置**：小料组管理（做法/面条/辣度/卤味等）、小料项管理（名称/价格）、设置默认组
-- **店铺设置**：店名/标语/电话/小票尾语，修改后全局生效
+- **店铺设置**：店名/标语/电话/小票尾语，修改后全局生效（页面标题、导航栏、小票打印同步更新）
 - **叫号大屏**：深色背景大字显示待取餐号码，自动刷新
+- **订单统计**：今日订单数、营收、进行中、客单价
 
 ### 小票打印
 - 支持 ESC/POS 热敏打印机（网络/USB）
-- 小票格式：店名→表头→商品明细（核心属性加粗、小料带组名和价格）→合计→尾语
+- 双联小票：顾客联（有价格）+ 后厨联（无价格，取餐号大字）
 
 ## 技术栈
 
@@ -50,8 +51,8 @@ ordering-system-web/
 │       ├── components/        # 组件（购物车/小料选择）
 │       ├── stores/            # Pinia 状态管理
 │       └── api/               # API 封装
-├── deploy.bat                 # Windows 一键部署脚本
-└── deploy.sh                  # Linux/Mac 一键部署脚本
+├── deploy.bat                 # Windows 构建脚本
+└── deploy.sh                  # Linux/Mac 构建脚本
 ```
 
 ## 快速开始
@@ -64,7 +65,6 @@ ordering-system-web/
 
 ```bash
 # 启动后端（端口 8080）
-cd ordering-system-web
 gradlew.bat :server:run
 
 # 启动前端（端口 5173，自动代理到后端）
@@ -77,24 +77,53 @@ npm run dev
 
 ### 生产部署
 
+#### 方式一：离线安装包（推荐）
+
+1. 构建安装包：
 ```bash
 # Windows
 deploy.bat
 
-# Linux/Mac
-bash deploy.sh
+# 前端构建（跳过类型检查）
+cd web && npx vite build
+
+# 复制前端到后端
+xcopy /E /I /Y web\dist server\static
+
+# 编译后端
+gradlew :server:installDist
 ```
 
-部署后启动：
-```bash
-# 方式一：直接运行
-gradlew.bat :server:run
+2. 打包 `server/build/install/server/` 目录为 `ordering-system-deploy.tar.gz`
 
-# 方式二：独立运行（不需要 Gradle）
+3. 上传到 Ubuntu 服务器并安装：
+```bash
+tar xzf ordering-system-deploy.tar.gz
+cd ordering-system-deploy
+sudo bash install.sh
+```
+
+安装后自动配置 systemd 服务，开机自启。
+
+#### 方式二：直接运行
+
+```bash
+# 编译
+gradlew :server:installDist
+
+# 运行
 server\build\install\server\bin\server.bat
 ```
 
-局域网内其他设备访问 `http://服务器IP:8080`
+## 服务管理（Linux）
+
+```bash
+sudo systemctl start ordering-system    # 启动
+sudo systemctl stop ordering-system     # 停止
+sudo systemctl restart ordering-system  # 重启
+sudo systemctl status ordering-system   # 状态
+sudo tail -f /opt/ordering-system/logs/app.log  # 日志
+```
 
 ## 页面说明
 
@@ -119,7 +148,7 @@ server\build\install\server\bin\server.bat
 
 ## 数据备份
 
-数据库文件为 `server/ordering.db`（SQLite），复制该文件即可备份全部数据。
+数据库文件位于 `/opt/ordering-system/data/`（Linux）或 `server/ordering.db`（开发环境），复制该目录即可备份全部数据。
 
 ## License
 
