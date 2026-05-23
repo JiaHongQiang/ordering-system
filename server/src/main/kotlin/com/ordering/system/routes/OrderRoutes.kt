@@ -253,7 +253,7 @@ fun Route.orderRoutes() {
             totalAmount = order.totalAmount,
             notes = order.notes,
             createdBy = order.createdBy,
-            storeName = settings["store_name"] ?: "老李板面馆",
+            storeName = settings["store_name"] ?: "",
             storePhone = settings["store_phone"] ?: "",
             storeTagline = settings["store_tagline"] ?: "",
             receiptFooter = settings["receipt_footer"] ?: "感谢光临，欢迎再来!"

@@ -81,7 +81,7 @@ data class OrderPrintData(
     val createdAt: String,
     val items: List<OrderItemPrintData>,
     val totalAmount: Double,
-    val storeName: String = "老李板面馆",
+    val storeName: String = "",
     val storePhone: String = "",
     val storeTagline: String = "",
     val receiptFooter: String = "感谢光临，欢迎再来!",

@@ -35,3 +35,12 @@ web/.env.*.local
 # Logs
 *.log
 logs/
+
+# Build output
+server/static/
+
+# Deploy artifacts
+*.tar.gz
+
+# Local config
+local.properties

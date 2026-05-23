@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class SettingsResponse(
-    val storeName: String = "老李板面馆",
+    val storeName: String = "",
     val storePhone: String = "",
     val storeTagline: String = "",
     val receiptFooter: String = "感谢光临，欢迎再来!"
@@ -29,7 +29,7 @@ fun Route.settingsRoutes() {
     get("/api/settings") {
         val all = SettingsDao.getAll()
         call.respond(HttpStatusCode.OK, SettingsResponse(
-            storeName = all["store_name"] ?: "老李板面馆",
+            storeName = all["store_name"] ?: "",
             storePhone = all["store_phone"] ?: "",
             storeTagline = all["store_tagline"] ?: "",
             receiptFooter = all["receipt_footer"] ?: "感谢光临，欢迎再来!"

@@ -11,6 +11,7 @@ onMounted(async () => {
   try {
     const settings = await api.get('/settings') as any
     storeName.value = settings.storeName || '点餐系统'
+    document.title = storeName.value ? storeName.value + ' - 点餐系统' : '点餐系统'
   } catch (_: any) {
     // ignore
   }
