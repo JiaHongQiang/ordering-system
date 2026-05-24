@@ -35,8 +35,9 @@ const filteredOrders = computed(() => {
   if (dateFilter.value === 'today') list = list.filter(o => o.createdAt >= todayStart)
   else if (dateFilter.value === 'week') list = list.filter(o => o.createdAt >= weekStart)
   else if (dateFilter.value === 'month') list = list.filter(o => o.createdAt >= monthStart)
-  // 状态筛选
-  if (activeTab.value !== 'all') list = list.filter(o => o.status === activeTab.value)
+  // 状态筛选（兼容旧 PENDING 订单归入制作中）
+  if (activeTab.value === 'PREPARING') list = list.filter(o => o.status === 'PREPARING' || o.status === 'PENDING')
+  else if (activeTab.value !== 'all') list = list.filter(o => o.status === activeTab.value)
   return list
 })
 

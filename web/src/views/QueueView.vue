@@ -11,7 +11,7 @@ const loadQueue = async () => {
   try {
     const all = await fetchOrders()
     readyOrders.value = all.filter(o => o.status === 'READY')
-    preparingOrders.value = all.filter(o => o.status === 'PREPARING')
+    preparingOrders.value = all.filter(o => o.status === 'PREPARING' || o.status === 'PENDING')
   } catch (_: any) {
     // ignore
   }
