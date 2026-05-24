@@ -10,6 +10,7 @@ const activeTab = ref('all')
 const dateFilter = ref('today')
 
 const statusMap: Record<string, { label: string; color: string }> = {
+  PENDING: { label: '制作中', color: '#F56C6C' },
   PREPARING: { label: '制作中', color: '#F56C6C' },
   READY: { label: '待取餐', color: '#67C23A' },
   COMPLETED: { label: '已完成', color: '#909399' },
@@ -49,6 +50,7 @@ const handleTabChange = (tab: string) => {
 
 const getNextStatus = (status: string): string | null => {
   const flow: Record<string, string> = {
+    PENDING: 'PREPARING',
     PREPARING: 'READY',
     READY: 'COMPLETED'
   }
