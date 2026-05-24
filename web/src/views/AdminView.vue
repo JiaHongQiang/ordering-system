@@ -332,7 +332,7 @@ onMounted(() => { loadOrders(); loadAll(); loadSettings() })
       </div>
       <el-table :data="filteredOrders" stripe v-loading="loading">
         <el-table-column label="取餐号" width="100"><template #default="{ row }"><span style="font-size: 20px; font-weight: bold">{{ row.orderNumber }}</span></template></el-table-column>
-        <el-table-column label="状态" width="100"><template #default="{ row }"><el-tag :color="statusMap[row.status]?.color" effect="dark" size="small">{{ statusMap[row.status]?.label }}</el-tag></template></el-table-column>
+        <el-table-column label="状态" width="100"><template #default="{ row }"><el-tag :color="statusMap[row.status]?.color" effect="dark" size="small">{{ statusMap[row.status]?.label || row.status }}</el-tag></template></el-table-column>
         <el-table-column label="金额" width="100" align="right"><template #default="{ row }"><span style="color: #f56c6c; font-weight: bold">¥{{ row.totalAmount.toFixed(2) }}</span></template></el-table-column>
         <el-table-column label="件数" width="70" prop="itemCount" align="center" />
         <el-table-column label="备注" prop="notes" min-width="120" show-overflow-tooltip />
@@ -353,7 +353,7 @@ onMounted(() => { loadOrders(); loadAll(); loadSettings() })
       <div v-if="orderDetail">
         <div style="display: flex; justify-content: space-between; margin-bottom: 16px">
           <span style="font-size: 24px; font-weight: bold">{{ orderDetail.orderNumber }}</span>
-          <el-tag :color="statusMap[orderDetail.status]?.color" effect="dark">{{ statusMap[orderDetail.status]?.label }}</el-tag>
+          <el-tag :color="statusMap[orderDetail.status]?.color" effect="dark">{{ statusMap[orderDetail.status]?.label || orderDetail.status }}</el-tag>
         </div>
         <div style="color: #999; margin-bottom: 16px">{{ formatTime(orderDetail.createdAt) }}</div>
 

@@ -124,7 +124,7 @@ const formatTime = (ts: number) => {
             <div style="display: flex; justify-content: space-between; align-items: center">
               <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px">{{ order.orderNumber }}</span>
               <el-tag :color="statusMap[order.status]?.color" effect="dark" size="small">
-                {{ statusMap[order.status]?.label }}
+                {{ statusMap[order.status]?.label || order.status }}
               </el-tag>
             </div>
           </template>
