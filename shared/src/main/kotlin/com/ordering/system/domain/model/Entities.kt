@@ -3,7 +3,7 @@ package com.ordering.system.domain.model
 import kotlinx.serialization.Serializable
 
 enum class OrderStatus {
-    PENDING, PAID, PREPARING, READY, COMPLETED, CANCELLED
+    PENDING, PREPARING, READY, COMPLETED, CANCELLED
 }
 
 data class Product(

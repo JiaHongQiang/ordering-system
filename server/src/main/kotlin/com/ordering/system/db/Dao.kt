@@ -321,7 +321,6 @@ object OrderDao {
             (OrdersTable.tableNumber eq tableNumber) and
                 (OrdersTable.status inList listOf(
                     OrderStatus.PENDING.name,
-                    OrderStatus.PAID.name,
                     OrderStatus.PREPARING.name,
                     OrderStatus.READY.name
                 ))
@@ -334,7 +333,6 @@ object OrderDao {
         OrdersTable.select {
             OrdersTable.status inList listOf(
                 OrderStatus.PENDING.name,
-                OrderStatus.PAID.name,
                 OrderStatus.PREPARING.name,
                 OrderStatus.READY.name
             )
