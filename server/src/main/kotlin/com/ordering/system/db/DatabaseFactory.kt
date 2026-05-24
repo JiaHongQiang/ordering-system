@@ -22,6 +22,10 @@ object DatabaseFactory {
                 OrderItemsTable,
                 SettingsTable
             )
+            // 迁移：旧 PENDING 订单更新为 PREPARING
+            OrdersTable.update({ OrdersTable.status eq "PENDING" }) {
+                it[status] = OrderStatus.PREPARING.name
+            }
             insertSampleDataIfEmpty()
             insertDefaultSettings()
         }

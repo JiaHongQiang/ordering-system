@@ -10,7 +10,6 @@ const activeTab = ref('all')
 const dateFilter = ref('today')
 
 const statusMap: Record<string, { label: string; color: string }> = {
-  PENDING: { label: '制作中', color: '#F56C6C' },
   PREPARING: { label: '制作中', color: '#F56C6C' },
   READY: { label: '待取餐', color: '#67C23A' },
   COMPLETED: { label: '已完成', color: '#909399' },
@@ -35,9 +34,8 @@ const filteredOrders = computed(() => {
   if (dateFilter.value === 'today') list = list.filter(o => o.createdAt >= todayStart)
   else if (dateFilter.value === 'week') list = list.filter(o => o.createdAt >= weekStart)
   else if (dateFilter.value === 'month') list = list.filter(o => o.createdAt >= monthStart)
-  // 状态筛选（兼容旧 PENDING 订单归入制作中）
-  if (activeTab.value === 'PREPARING') list = list.filter(o => o.status === 'PREPARING' || o.status === 'PENDING')
-  else if (activeTab.value !== 'all') list = list.filter(o => o.status === activeTab.value)
+  // 状态筛选
+  if (activeTab.value !== 'all') list = list.filter(o => o.status === activeTab.value)
   return list
 })
 
@@ -51,7 +49,6 @@ const handleTabChange = (tab: string) => {
 
 const getNextStatus = (status: string): string | null => {
   const flow: Record<string, string> = {
-    PENDING: 'PREPARING',
     PREPARING: 'READY',
     READY: 'COMPLETED'
   }
