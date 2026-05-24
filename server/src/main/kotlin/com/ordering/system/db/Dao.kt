@@ -304,6 +304,16 @@ object OrderDao {
             .map { it.toOrder() }
     }
 
+    fun countToday(): Long = transaction {
+        val todayStart = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        OrdersTable.select { OrdersTable.createdAt greaterEq todayStart }.count()
+    }
+
     fun updateStatus(id: Long, status: OrderStatus): Boolean = transaction {
         val now = System.currentTimeMillis()
         val updateCount = OrdersTable.update({ OrdersTable.id eq id }) {

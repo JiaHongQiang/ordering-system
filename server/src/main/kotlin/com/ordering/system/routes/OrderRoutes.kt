@@ -145,9 +145,8 @@ fun Route.orderRoutes() {
 
         val pricing = pricingEngine.calculateOrder(cartItems)
 
-        // 取餐号：3 位数，每天重置
-        val todayPrefix = SimpleDateFormat("MMdd").format(Date())
-        val seq = (OrderDao.findAll().size + 1) % 1000
+        // 取餐号：3 位数，每天从 001 重新开始
+        val seq = (OrderDao.countToday() + 1).toInt()
         val orderNumber = String.format("%03d", seq)
 
         val orderItems = cartItems.zip(pricing.itemPricings).map { (item, itemPricing) ->
