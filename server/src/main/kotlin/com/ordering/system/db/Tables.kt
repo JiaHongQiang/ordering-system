@@ -68,7 +68,7 @@ object OrdersTable : Table("orders") {
     val id = long("id").autoIncrement()
     val orderNumber = varchar("order_number", 50)
     val tableNumber = varchar("table_number", 20).default("")
-    val status = varchar("status", 20).default(OrderStatus.PENDING.name)
+    val status = varchar("status", 20).default(OrderStatus.PREPARING.name)
     val totalAmount = double("total_amount").default(0.0)
     val itemCount = integer("item_count").default(0)
     val paymentMethod = varchar("payment_method", 50).default("")

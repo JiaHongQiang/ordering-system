@@ -17,7 +17,6 @@ const orderDetailVisible = ref(false)
 const orderDetail = ref<OrderResp | null>(null)
 
 const statusMap: Record<string, { label: string; color: string }> = {
-  PENDING: { label: '待处理', color: '#E6A23C' },
   PREPARING: { label: '制作中', color: '#F56C6C' },
   READY: { label: '待取餐', color: '#67C23A' },
   COMPLETED: { label: '已完成', color: '#909399' },
@@ -44,7 +43,7 @@ const orderStats = computed(() => {
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
   const todayOrders = orders.value.filter(o => o.createdAt >= todayStart)
-  const activeStatuses = ['PENDING', 'PREPARING', 'READY']
+  const activeStatuses = ['PREPARING', 'READY']
   const completedToday = todayOrders.filter(o => o.status === 'COMPLETED')
   return {
     todayCount: todayOrders.length,
@@ -68,7 +67,7 @@ const parseMods = (json: string) => {
 }
 
 const handleAdvance = async (order: OrderResp) => {
-  const flow: Record<string, string> = { PENDING: 'PREPARING', PREPARING: 'READY', READY: 'COMPLETED' }
+  const flow: Record<string, string> = { PREPARING: 'READY', READY: 'COMPLETED' }
   const next = flow[order.status]; if (!next) return
   await updateOrderStatus(order.id, next); ElMessage.success(`${order.orderNumber} → ${statusMap[next].label}`); loadOrders()
 }
@@ -341,7 +340,7 @@ onMounted(() => { loadOrders(); loadAll(); loadSettings() })
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="viewOrderDetail(row)">详情</el-button>
-            <el-button v-if="!['COMPLETED','CANCELLED'].includes(row.status)" type="primary" size="small" @click="handleAdvance(row)">{{ { PENDING:'制作', PREPARING:'出餐', READY:'完成' }[row.status] }}</el-button>
+            <el-button v-if="!['COMPLETED','CANCELLED'].includes(row.status)" type="primary" size="small" @click="handleAdvance(row)">{{ { PREPARING:'出餐', READY:'完成' }[row.status] }}</el-button>
             <el-button size="small" @click="handlePrint(row)">打印</el-button>
             <el-button v-if="!['COMPLETED','CANCELLED'].includes(row.status)" type="danger" text size="small" @click="handleCancel(row)">取消</el-button>
           </template>

@@ -330,7 +330,6 @@ object OrderDao {
         OrdersTable.select {
             (OrdersTable.tableNumber eq tableNumber) and
                 (OrdersTable.status inList listOf(
-                    OrderStatus.PENDING.name,
                     OrderStatus.PREPARING.name,
                     OrderStatus.READY.name
                 ))
@@ -342,7 +341,6 @@ object OrderDao {
     fun findOccupiedTables(): List<String> = transaction {
         OrdersTable.select {
             OrdersTable.status inList listOf(
-                OrderStatus.PENDING.name,
                 OrderStatus.PREPARING.name,
                 OrderStatus.READY.name
             )

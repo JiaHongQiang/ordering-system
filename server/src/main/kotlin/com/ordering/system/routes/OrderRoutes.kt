@@ -162,7 +162,7 @@ fun Route.orderRoutes() {
         val order = Order(
             orderNumber = orderNumber,
             tableNumber = request.tableNumber,
-            status = OrderStatus.PENDING,
+            status = OrderStatus.PREPARING,
             totalAmount = pricing.total,
             itemCount = pricing.itemCount,
             notes = request.notes,
