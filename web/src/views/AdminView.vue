@@ -49,7 +49,7 @@ const orderStats = computed(() => {
   return {
     todayCount: todayOrders.length,
     todayRevenue: todayOrders.filter(o => o.status !== 'CANCELLED').reduce((s, o) => s + o.totalAmount, 0),
-    activeCount: orders.value.filter(o => activeStatuses.includes(o.status)).length,
+    activeCount: todayOrders.filter(o => activeStatuses.includes(o.status)).length,
     avgAmount: todayOrders.length > 0 ? todayOrders.filter(o => o.status !== 'CANCELLED').reduce((s, o) => s + o.totalAmount, 0) / Math.max(todayOrders.filter(o => o.status !== 'CANCELLED').length, 1) : 0
   }
 })
