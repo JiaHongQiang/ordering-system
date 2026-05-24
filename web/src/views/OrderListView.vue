@@ -7,6 +7,7 @@ import type { OrderResp } from '../api/order'
 
 const orderStore = useOrderStore()
 const activeTab = ref('all')
+const dateFilter = ref('today')
 
 const statusMap: Record<string, { label: string; color: string }> = {
   PENDING: { label: '待处理', color: '#E6A23C' },
@@ -25,8 +26,19 @@ const statusTabs = [
 ]
 
 const filteredOrders = computed(() => {
-  if (activeTab.value === 'all') return orderStore.orders
-  return orderStore.orders.filter(o => o.status === activeTab.value)
+  let list = orderStore.orders
+  // 日期筛选
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const dayOfWeek = now.getDay() || 7
+  const weekStart = todayStart - (dayOfWeek - 1) * 86400000
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+  if (dateFilter.value === 'today') list = list.filter(o => o.createdAt >= todayStart)
+  else if (dateFilter.value === 'week') list = list.filter(o => o.createdAt >= weekStart)
+  else if (dateFilter.value === 'month') list = list.filter(o => o.createdAt >= monthStart)
+  // 状态筛选
+  if (activeTab.value !== 'all') list = list.filter(o => o.status === activeTab.value)
+  return list
 })
 
 onMounted(() => {
@@ -35,7 +47,6 @@ onMounted(() => {
 
 const handleTabChange = (tab: string) => {
   activeTab.value = tab
-  orderStore.loadOrders(tab === 'all' ? undefined : tab)
 }
 
 const getNextStatus = (status: string): string | null => {
@@ -93,8 +104,15 @@ const formatTime = (ts: number) => {
 
 <template>
   <div style="height: 100%; display: flex; flex-direction: column">
-    <div style="padding: 16px 20px; background: white; border-bottom: 1px solid #eee">
-      <el-tabs :model-value="activeTab" @update:model-value="handleTabChange">
+    <div style="padding: 12px 20px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 16px">
+      <el-radio-group v-model="dateFilter" size="small">
+        <el-radio-button value="today">今日</el-radio-button>
+        <el-radio-button value="week">本周</el-radio-button>
+        <el-radio-button value="month">本月</el-radio-button>
+        <el-radio-button value="all">全部</el-radio-button>
+      </el-radio-group>
+      <el-divider direction="vertical" />
+      <el-tabs :model-value="activeTab" @update:model-value="handleTabChange" style="flex: 1">
         <el-tab-pane v-for="tab in statusTabs" :key="tab.key" :label="tab.label" :name="tab.key" />
       </el-tabs>
     </div>
