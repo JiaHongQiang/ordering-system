@@ -29,7 +29,7 @@ const filteredOrders = computed(() => {
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
   const dayOfWeek = now.getDay() || 7
-  const weekStart = todayStart - (dayOfWeek === 1 ? 6 : dayOfWeek - 1) * 86400000
+  const weekStart = todayStart - (dayOfWeek - 1) * 86400000
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
   if (dateFilter.value === 'today') list = list.filter(o => o.createdAt >= todayStart)
   else if (dateFilter.value === 'week') list = list.filter(o => o.createdAt >= weekStart)
