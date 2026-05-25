@@ -76,16 +76,20 @@ fun Application.module() {
         settingsRoutes()
         websocketRoutes()
 
-        // 上传文件访问
+        // 上传文件访问（图片缓存 7 天）
         val uploadsDir = File("static/uploads")
         uploadsDir.mkdirs()
-        staticFiles("/uploads", uploadsDir)
+        staticFiles("/uploads", uploadsDir) {
+            cacheControl { listOf(CacheControl.MaxAge(maxAgeSeconds = 604800)) }
+        }
 
         // 前端静态文件
         val staticDir = File("static")
         if (staticDir.exists() && staticDir.isDirectory) {
             staticFiles("/", staticDir) {
                 default("index.html")
+                // JS/CSS 等资源缓存 7 天
+                cacheControl { listOf(CacheControl.MaxAge(maxAgeSeconds = 604800)) }
             }
             // SPA 路由回退
             get("/{path...}") {
