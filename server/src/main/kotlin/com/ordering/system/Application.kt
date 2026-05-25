@@ -76,15 +76,18 @@ fun Application.module() {
         settingsRoutes()
         websocketRoutes()
 
+        // 获取应用根目录（支持 jpackage 和普通运行）
+        val appDir = System.getProperty("jpackage.app.dir")?.let { File(it) } ?: File(".")
+        val staticDir = File(appDir, "static")
+
         // 上传文件访问（图片缓存 7 天）
-        val uploadsDir = File("static/uploads")
+        val uploadsDir = File(staticDir, "uploads")
         uploadsDir.mkdirs()
         staticFiles("/uploads", uploadsDir) {
             cacheControl { listOf(CacheControl.MaxAge(maxAgeSeconds = 604800)) }
         }
 
         // 前端静态文件
-        val staticDir = File("static")
         if (staticDir.exists() && staticDir.isDirectory) {
             staticFiles("/", staticDir) {
                 default("index.html")

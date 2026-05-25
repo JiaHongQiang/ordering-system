@@ -4,12 +4,15 @@ import com.ordering.system.domain.model.OrderStatus
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.io.File
 
 object DatabaseFactory {
     private val json = Json { ignoreUnknownKeys = true }
 
     fun init() {
-        Database.connect("jdbc:sqlite:ordering.db", driver = "org.sqlite.JDBC")
+        val appDir = System.getProperty("jpackage.app.dir")?.let { File(it) } ?: File(".")
+        val dbFile = File(appDir, "ordering.db")
+        Database.connect("jdbc:sqlite:${dbFile.absolutePath}", driver = "org.sqlite.JDBC")
 
         transaction {
             SchemaUtils.create(
