@@ -10,7 +10,7 @@ object DatabaseFactory {
     private val json = Json { ignoreUnknownKeys = true }
 
     fun init() {
-        val appDir = System.getProperty("jpackage.app.dir")?.let { File(it) } ?: File(".")
+        val appDir = File(".")
         val dbFile = File(appDir, "ordering.db")
         Database.connect("jdbc:sqlite:${dbFile.absolutePath}", driver = "org.sqlite.JDBC")
 
@@ -23,6 +23,7 @@ object DatabaseFactory {
                 ProductModifierGroupXrefTable,
                 OrdersTable,
                 OrderItemsTable,
+                DailyOrderSequencesTable,
                 SettingsTable
             )
             // 迁移：旧 PENDING 订单更新为 PREPARING
@@ -180,7 +181,9 @@ object DatabaseFactory {
             "store_name" to "老李板面馆",
             "store_phone" to "0371-8888-6666",
             "store_tagline" to "正宗手擀板面 . 量大实惠",
-            "receipt_footer" to "感谢光临，欢迎再来!"
+            "receipt_footer" to "感谢光临，欢迎再来!",
+            "printer_host" to "192.168.1.100",
+            "printer_port" to "9100"
         )
         defaults.forEach { (k, v) ->
             val exists = SettingsTable.select { SettingsTable.key eq k }.count() > 0

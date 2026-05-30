@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Delete } from '@element-plus/icons-vue'
 import { fetchOrders, updateOrderStatus, printOrder } from '../api/order'
+import { connectOrderEvents } from '../api/realtime'
 import type { OrderResp } from '../api/order'
 import api from '../api/index'
 
@@ -15,6 +16,7 @@ const dateFilter = ref('today')
 const loading = ref(false)
 const orderDetailVisible = ref(false)
 const orderDetail = ref<OrderResp | null>(null)
+let orderSocket: WebSocket | null = null
 
 const statusMap: Record<string, { label: string; color: string }> = {
   PREPARING: { label: '制作中', color: '#F56C6C' },
@@ -72,6 +74,11 @@ const handleAdvance = async (order: OrderResp) => {
   await updateOrderStatus(order.id, next); ElMessage.success(`${order.orderNumber} → ${statusMap[next].label}`); loadOrders()
 }
 
+const getAdvanceLabel = (status: string) => {
+  const labels: Record<string, string> = { PREPARING: '出餐', READY: '完成' }
+  return labels[status] || ''
+}
+
 const handleCancel = async (order: OrderResp) => {
   await ElMessageBox.confirm(`取消 ${order.orderNumber}？`, '确认'); await updateOrderStatus(order.id, 'CANCELLED'); loadOrders()
 }
@@ -84,7 +91,7 @@ const formatTime = (ts: number) => new Date(ts).toLocaleString('zh-CN')
 
 // ==================== 数据类型 ====================
 interface Category { id: number; displayName: string; sortOrder: number; colorHex: string; isActive: boolean }
-interface Product { id: number; categoryId: number; name: string; basePrice: number; description: string; imageUrl: string | null; isActive: boolean; hasModifiers: boolean; sortOrder: number; currentStock: number }
+interface Product { id: number; categoryId: number; name: string; basePrice: number; stockWarningThreshold: number; description: string; imageUrl: string | null; isActive: boolean; hasModifiers: boolean; sortOrder: number; currentStock: number }
 interface ModGroup { id: number; name: string; isRequired: boolean; isDefault: boolean; maxSelection: number; minSelection: number; sortOrder: number; isActive: boolean; productIds: number[]; modifiers: ModItem[] }
 interface ModItem { id: number; groupId: number; name: string; additionalPrice: number; sortOrder: number; isActive: boolean }
 
@@ -264,12 +271,19 @@ const getSelectionLabel = (g: ModGroup) => {
 }
 
 // ==================== 店铺设置 ====================
-const settingsForm = ref({ storeName: '', storePhone: '', storeTagline: '', receiptFooter: '' })
+const settingsForm = ref({ storeName: '', storePhone: '', storeTagline: '', receiptFooter: '', printerHost: '', printerPort: 9100 })
 
 const loadSettings = async () => {
   try {
     const s = await api.get('/settings') as any
-    settingsForm.value = { storeName: s.storeName || '', storePhone: s.storePhone || '', storeTagline: s.storeTagline || '', receiptFooter: s.receiptFooter || '' }
+    settingsForm.value = {
+      storeName: s.storeName || '',
+      storePhone: s.storePhone || '',
+      storeTagline: s.storeTagline || '',
+      receiptFooter: s.receiptFooter || '',
+      printerHost: s.printerHost || '',
+      printerPort: s.printerPort || 9100
+    }
   } catch (_: any) {}
 }
 
@@ -280,7 +294,17 @@ const saveSettings = async () => {
   } catch (e: any) { ElMessage.error(e.message) }
 }
 
-onMounted(() => { loadOrders(); loadAll(); loadSettings() })
+onMounted(() => {
+  loadOrders()
+  loadAll()
+  loadSettings()
+  orderSocket = connectOrderEvents(loadOrders)
+})
+
+onUnmounted(() => {
+  orderSocket?.close()
+  orderSocket = null
+})
 </script>
 
 <template>
@@ -340,7 +364,7 @@ onMounted(() => { loadOrders(); loadAll(); loadSettings() })
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="viewOrderDetail(row)">详情</el-button>
-            <el-button v-if="!['COMPLETED','CANCELLED'].includes(row.status)" type="primary" size="small" @click="handleAdvance(row)">{{ { PREPARING:'出餐', READY:'完成' }[row.status] }}</el-button>
+            <el-button v-if="!['COMPLETED','CANCELLED'].includes(row.status)" type="primary" size="small" @click="handleAdvance(row)">{{ getAdvanceLabel(row.status) }}</el-button>
             <el-button size="small" @click="handlePrint(row)">打印</el-button>
             <el-button v-if="!['COMPLETED','CANCELLED'].includes(row.status)" type="danger" text size="small" @click="handleCancel(row)">取消</el-button>
           </template>
@@ -654,6 +678,8 @@ onMounted(() => { loadOrders(); loadAll(); loadSettings() })
           <el-form-item label="电话"><el-input v-model="settingsForm.storePhone" placeholder="如：0371-8888-6666" /></el-form-item>
           <el-form-item label="标语"><el-input v-model="settingsForm.storeTagline" placeholder="如：正宗手擀板面" /></el-form-item>
           <el-form-item label="小票尾语"><el-input v-model="settingsForm.receiptFooter" placeholder="如：感谢光临，欢迎再来!" /></el-form-item>
+          <el-form-item label="打印机IP"><el-input v-model="settingsForm.printerHost" placeholder="如：192.168.1.100" /></el-form-item>
+          <el-form-item label="打印端口"><el-input-number v-model="settingsForm.printerPort" :min="1" :max="65535" /></el-form-item>
           <el-form-item><el-button type="primary" @click="saveSettings">保存设置</el-button></el-form-item>
         </el-form>
       </el-card>

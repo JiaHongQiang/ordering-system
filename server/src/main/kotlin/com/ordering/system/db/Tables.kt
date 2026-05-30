@@ -99,6 +99,12 @@ object OrderItemsTable : Table("order_items") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object DailyOrderSequencesTable : Table("daily_order_sequences") {
+    val businessDate = varchar("business_date", 8)
+    val lastValue = integer("last_value").default(0)
+    override val primaryKey = PrimaryKey(businessDate)
+}
+
 object SettingsTable : Table("settings") {
     val key = varchar("key", 50)
     val value = text("value")

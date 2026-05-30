@@ -3,6 +3,7 @@ package com.ordering.system.routes
 import com.ordering.system.db.OrderDao
 import com.ordering.system.db.OrderItemDao
 import com.ordering.system.db.ProductDao
+import com.ordering.system.db.SettingsDao
 import com.ordering.system.domain.engine.OrderItemAdapter
 import com.ordering.system.domain.engine.OrderValidator
 import com.ordering.system.domain.engine.PricingEngine
@@ -145,10 +146,6 @@ fun Route.orderRoutes() {
 
         val pricing = pricingEngine.calculateOrder(cartItems)
 
-        // 取餐号：3 位数，每天从 001 重新开始
-        val seq = (OrderDao.countToday() + 1).toInt()
-        val orderNumber = String.format("%03d", seq)
-
         val orderItems = cartItems.zip(pricing.itemPricings).map { (item, itemPricing) ->
             orderItemAdapter.toOrderItem(
                 pricing = itemPricing,
@@ -160,7 +157,7 @@ fun Route.orderRoutes() {
         }
 
         val order = Order(
-            orderNumber = orderNumber,
+            orderNumber = "",
             tableNumber = request.tableNumber,
             status = OrderStatus.PREPARING,
             totalAmount = pricing.total,
@@ -169,7 +166,7 @@ fun Route.orderRoutes() {
             createdBy = request.createdBy
         )
 
-        val savedOrder = OrderDao.create(order, orderItems)
+        val savedOrder = OrderDao.createWithNextNumber(order, orderItems)
 
         cartItems.forEach { cartItem ->
             val product = products[cartItem.productId]
@@ -178,6 +175,7 @@ fun Route.orderRoutes() {
             }
         }
 
+        OrderBroadcaster.broadcastOrderChanged("ORDER_CREATED", savedOrder)
         call.respond(HttpStatusCode.Created, savedOrder.toResponse(orderItems))
     }
 
@@ -214,6 +212,7 @@ fun Route.orderRoutes() {
         val updated = OrderDao.updateStatus(id, status)
         if (updated) {
             val order = OrderDao.findById(id)!!
+            OrderBroadcaster.broadcastOrderChanged("ORDER_STATUS_CHANGED", order)
             call.respond(HttpStatusCode.OK, order.toResponse())
         } else {
             call.respond(HttpStatusCode.NotFound, ErrorResponse("订单不存在"))
@@ -229,7 +228,13 @@ fun Route.orderRoutes() {
         }
         val items = OrderItemDao.findByOrderId(id)
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-        val settings = com.ordering.system.db.SettingsDao.getAll()
+        val settings = SettingsDao.getAll()
+        val printerHost = settings["printer_host"]?.trim().orEmpty()
+        val printerPort = settings["printer_port"]?.toIntOrNull()?.takeIf { it in 1..65535 } ?: 9100
+        if (printerHost.isBlank()) {
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse("请先在后台设置打印机 IP"))
+            return@post
+        }
         val printData = OrderPrintData(
             orderId = order.id,
             orderNumber = order.orderNumber,
@@ -258,7 +263,7 @@ fun Route.orderRoutes() {
             receiptFooter = settings["receipt_footer"] ?: "感谢光临，欢迎再来!"
         )
         try {
-            val connector = NetworkPrinterConnector("192.168.1.100")
+            val connector = NetworkPrinterConnector(printerHost, printerPort)
             val driver = PosPrinterDriver(connector)
             driver.open()
             // 顾客联（有价格）先打印

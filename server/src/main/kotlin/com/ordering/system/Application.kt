@@ -76,8 +76,7 @@ fun Application.module() {
         settingsRoutes()
         websocketRoutes()
 
-        // 获取应用根目录（支持 jpackage 和普通运行）
-        val appDir = System.getProperty("jpackage.app.dir")?.let { File(it) } ?: File(".")
+        val appDir = File(".")
         val staticDir = File(appDir, "static")
 
         // 上传文件访问（图片缓存 7 天）

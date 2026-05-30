@@ -23,7 +23,8 @@ data class CategoryResponse(
 @Serializable
 data class ProductResponse(
     val id: Long, val categoryId: Long, val name: String,
-    val basePrice: Double, val description: String,
+    val basePrice: Double, val stockWarningThreshold: Int,
+    val description: String,
     val hasModifiers: Boolean = false,
     val imageUrl: String?, val isActive: Boolean, val sortOrder: Int,
     val currentStock: Int
@@ -87,8 +88,17 @@ data class UpdateCategoryRequest(
 )
 
 fun Product.toResponse() = ProductResponse(
-    id, categoryId, name, basePrice, description, hasModifiers,
-    imageUrl, isActive, sortOrder, currentStock
+    id = id,
+    categoryId = categoryId,
+    name = name,
+    basePrice = basePrice,
+    stockWarningThreshold = stockWarningThreshold,
+    description = description,
+    hasModifiers = hasModifiers,
+    imageUrl = imageUrl,
+    isActive = isActive,
+    sortOrder = sortOrder,
+    currentStock = currentStock
 )
 
 fun Route.menuRoutes() {

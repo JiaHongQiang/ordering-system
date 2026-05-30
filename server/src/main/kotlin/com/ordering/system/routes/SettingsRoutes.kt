@@ -14,7 +14,9 @@ data class SettingsResponse(
     val storeName: String = "",
     val storePhone: String = "",
     val storeTagline: String = "",
-    val receiptFooter: String = "感谢光临，欢迎再来!"
+    val receiptFooter: String = "感谢光临，欢迎再来!",
+    val printerHost: String = "",
+    val printerPort: Int = 9100
 )
 
 @Serializable
@@ -22,7 +24,9 @@ data class UpdateSettingsRequest(
     val storeName: String? = null,
     val storePhone: String? = null,
     val storeTagline: String? = null,
-    val receiptFooter: String? = null
+    val receiptFooter: String? = null,
+    val printerHost: String? = null,
+    val printerPort: Int? = null
 )
 
 fun Route.settingsRoutes() {
@@ -32,7 +36,9 @@ fun Route.settingsRoutes() {
             storeName = all["store_name"] ?: "",
             storePhone = all["store_phone"] ?: "",
             storeTagline = all["store_tagline"] ?: "",
-            receiptFooter = all["receipt_footer"] ?: "感谢光临，欢迎再来!"
+            receiptFooter = all["receipt_footer"] ?: "感谢光临，欢迎再来!",
+            printerHost = all["printer_host"] ?: "",
+            printerPort = all["printer_port"]?.toIntOrNull()?.takeIf { it in 1..65535 } ?: 9100
         ))
     }
 
@@ -43,6 +49,8 @@ fun Route.settingsRoutes() {
         req.storePhone?.let { updates["store_phone"] = it }
         req.storeTagline?.let { updates["store_tagline"] = it }
         req.receiptFooter?.let { updates["receipt_footer"] = it }
+        req.printerHost?.let { updates["printer_host"] = it.trim() }
+        req.printerPort?.let { updates["printer_port"] = it.coerceIn(1, 65535).toString() }
         if (updates.isNotEmpty()) {
             SettingsDao.setAll(updates)
         }

@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useOrderStore } from '../stores/order'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { printOrder } from '../api/order'
+import { connectOrderEvents } from '../api/realtime'
 import type { OrderResp } from '../api/order'
 
 const orderStore = useOrderStore()
 const activeTab = ref('all')
 const dateFilter = ref('today')
+let orderSocket: WebSocket | null = null
 
 const statusMap: Record<string, { label: string; color: string }> = {
   PREPARING: { label: '制作中', color: '#F56C6C' },
@@ -41,6 +43,12 @@ const filteredOrders = computed(() => {
 
 onMounted(() => {
   orderStore.loadOrders()
+  orderSocket = connectOrderEvents(() => orderStore.loadOrders())
+})
+
+onUnmounted(() => {
+  orderSocket?.close()
+  orderSocket = null
 })
 
 const handleTabChange = (tab: string) => {

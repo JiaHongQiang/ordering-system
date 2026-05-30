@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { fetchOrders } from '../api/order'
+import { connectOrderEvents } from '../api/realtime'
 import type { OrderResp } from '../api/order'
 
 const readyOrders = ref<OrderResp[]>([])
 const preparingOrders = ref<OrderResp[]>([])
 let timer: ReturnType<typeof setInterval> | null = null
+let orderSocket: WebSocket | null = null
 
 const loadQueue = async () => {
   try {
@@ -20,10 +22,13 @@ const loadQueue = async () => {
 onMounted(() => {
   loadQueue()
   timer = setInterval(loadQueue, 10000)
+  orderSocket = connectOrderEvents(loadQueue)
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  orderSocket?.close()
+  orderSocket = null
 })
 
 const formatTime = (ts: number) => {

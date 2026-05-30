@@ -4,7 +4,11 @@ import com.ordering.system.domain.model.*
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -250,6 +254,15 @@ object ProductDao {
 
 object OrderDao {
     fun create(order: Order, items: List<OrderItem>): Order = transaction {
+        insertOrder(order, items)
+    }
+
+    fun createWithNextNumber(order: Order, items: List<OrderItem>): Order = transaction {
+        val orderNumber = nextOrderNumber()
+        insertOrder(order.copy(orderNumber = orderNumber), items)
+    }
+
+    private fun insertOrder(order: Order, items: List<OrderItem>): Order {
         OrdersTable.insert {
             it[orderNumber] = order.orderNumber
             it[tableNumber] = order.tableNumber
@@ -283,7 +296,37 @@ object OrderDao {
             }
         }
 
-        order.copy(id = orderId)
+        return order.copy(id = orderId)
+    }
+
+    private fun nextOrderNumber(): String {
+        val zoneId = ZoneId.systemDefault()
+        val today = Instant.ofEpochMilli(System.currentTimeMillis()).atZone(zoneId).toLocalDate()
+        val businessDate = today.format(DateTimeFormatter.BASIC_ISO_DATE)
+        val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val nextDayStart = today.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val existingTodayCount = OrdersTable.select {
+            (OrdersTable.createdAt greaterEq dayStart) and (OrdersTable.createdAt less nextDayStart)
+        }.count().toInt()
+
+        TransactionManager.current().exec(
+            """
+            INSERT OR IGNORE INTO daily_order_sequences (business_date, last_value)
+            VALUES ('$businessDate', $existingTodayCount)
+            """.trimIndent()
+        )
+        TransactionManager.current().exec(
+            """
+            UPDATE daily_order_sequences
+            SET last_value = max(last_value, $existingTodayCount) + 1
+            WHERE business_date = '$businessDate'
+            """.trimIndent()
+        )
+
+        val seq = DailyOrderSequencesTable
+            .select { DailyOrderSequencesTable.businessDate eq businessDate }
+            .single()[DailyOrderSequencesTable.lastValue]
+        return String.format("%03d", seq)
     }
 
     fun findById(id: Long): Order? = transaction {

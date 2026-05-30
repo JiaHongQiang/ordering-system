@@ -13,6 +13,7 @@ export interface Product {
   categoryId: number
   name: string
   basePrice: number
+  stockWarningThreshold: number
   description: string
   hasModifiers: boolean
   imageUrl: string | null
